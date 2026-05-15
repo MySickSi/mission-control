@@ -14,6 +14,7 @@ RestartSec=5
 StandardOutput=append:/home/ubuntu/.openclaw/workspace/mission-control/server.log
 StandardError=append:/home/ubuntu/.openclaw/workspace/mission-control/server.log
 Environment="NODE_ENV=production"
+Environment="SHODAN_API_KEY=your-new-key-here"
 
 [Install]
 WantedBy=multi-user.target
