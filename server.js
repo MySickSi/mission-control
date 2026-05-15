@@ -310,7 +310,7 @@ const server = http.createServer((req, res) => {
             const catoDir = path.join(path.dirname(__dirname), 'cato');
             const scriptPath = path.join(catoDir, 'cato.js');
             
-            const result = execSync(`SHODAN_API_KEY=Zx4X8qqM3rUS0k5OWLuw4tux81ZtAJg3 node ${scriptPath}`, {
+            const result = execSync(`SHODAN_API_KEY=${process.env.SHODAN_API_KEY || ''} node ${scriptPath}`, {
                 encoding: 'utf-8',
                 cwd: catoDir,
                 timeout: 60000
