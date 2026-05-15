@@ -10,7 +10,7 @@ const PORT = 8080;
 
 const server = http.createServer((req, res) => {
     // CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:8080');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -466,12 +466,9 @@ const server = http.createServer((req, res) => {
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ reply, sessionId: usedSession }));
                 } catch (e) {
+                    console.error('[chat] parse error:', e.message, '\nstderr:', stderr, '\nstdout:', stdout);
                     res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        error: 'parse error: ' + e.message,
-                        stderr: stderr.slice(-500),
-                        stdout: stdout.slice(-500)
-                    }));
+                    res.end(JSON.stringify({ error: 'processing failed' }));
                 }
             });
         });
