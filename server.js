@@ -232,13 +232,23 @@ const server = http.createServer((req, res) => {
         try {
             const articlesFile = path.join(parentDir, 'news-agent', 'data', 'articles.json');
             let articles = [];
+            let summaries = {};
             let lastUpdated = null;
             if (fs.existsSync(articlesFile)) {
-                articles = JSON.parse(fs.readFileSync(articlesFile, 'utf-8'));
-                lastUpdated = fs.statSync(articlesFile).mtime.toISOString();
+                const data = JSON.parse(fs.readFileSync(articlesFile, 'utf-8'));
+                if (Array.isArray(data)) {
+                    articles = data;
+                } else {
+                    articles = data.articles || [];
+                    summaries = data.summaries || {};
+                    lastUpdated = data.lastUpdated || null;
+                }
+                if (!lastUpdated) {
+                    lastUpdated = fs.statSync(articlesFile).mtime.toISOString();
+                }
             }
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ articles, lastUpdated }));
+            res.end(JSON.stringify({ articles, summaries, lastUpdated }));
         } catch (err) {
             console.error('[news]', err.message);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -317,7 +327,8 @@ const server = http.createServer((req, res) => {
                 encoding: 'utf-8',
                 cwd: newsDir
             });
-            const output = JSON.parse(result);
+            const jsonStart = result.indexOf('{');
+            const output = jsonStart >= 0 ? JSON.parse(result.slice(jsonStart)) : {};
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, result: output }));
         } catch (err) {
