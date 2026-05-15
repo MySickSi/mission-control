@@ -184,6 +184,10 @@
             display: none;
         }
 
+        .date-content.hidden {
+            display: none;
+        }
+
         .article-card {
             background: var(--bg-secondary);
             border: 1px solid var(--bg-tertiary);
@@ -323,6 +327,93 @@
             border-radius: 6px;
             font-size: 0.9rem;
         }
+
+        .summary-block {
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .summary-text {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+
+        .references-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .references-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--neutral-400);
+            margin-bottom: 0.75rem;
+            padding-left: 0.25rem;
+        }
+
+        .reference-item {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s ease;
+        }
+
+        .reference-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .ref-badge {
+            flex-shrink: 0;
+            padding: 0.2rem 0.5rem;
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ref-badge.critical {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        .ref-badge.high {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fcd34d;
+        }
+
+        .ref-title {
+            flex: 1;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .ref-source {
+            flex-shrink: 0;
+            font-size: 0.8rem;
+            color: var(--neutral-400);
+        }
     </style>
 </head>
 <body>
@@ -373,6 +464,7 @@
         ];
 
         let allArticles = [];
+        let summaries = {};
         let selectedCategory = 'All';
 
         // Initialize
@@ -406,7 +498,8 @@
                 const response = await fetch('/api/news');
                 const data = await response.json();
                 allArticles = data.articles || [];
-                
+                summaries = data.summaries || {};
+
                 updateStats();
                 renderArticles();
                 updateLastFetch(data.lastUpdated);
@@ -422,31 +515,24 @@
 
         function groupArticlesByDate(articles) {
             const groups = {};
-            
+
             articles.forEach(article => {
                 const date = new Date(article.fetchedAt);
-                const dateStr = date.toLocaleDateString('en-US', { 
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
+                const isoDate = date.toISOString().split('T')[0];
+                const displayDate = date.toLocaleDateString('en-US', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                 });
-                
-                if (!groups[dateStr]) {
-                    groups[dateStr] = [];
+
+                if (!groups[isoDate]) {
+                    groups[isoDate] = { displayDate, articles: [] };
                 }
-                groups[dateStr].push(article);
+                groups[isoDate].articles.push(article);
             });
-            
-            // Sort dates descending (today first)
-            const sorted = {};
-            Object.keys(groups)
+
+            // Sort descending (today first)
+            return Object.keys(groups)
                 .sort((a, b) => new Date(b) - new Date(a))
-                .forEach(key => {
-                    sorted[key] = groups[key];
-                });
-            
-            return sorted;
+                .reduce((sorted, key) => { sorted[key] = groups[key]; return sorted; }, {});
         }
 
         function renderArticles() {
@@ -456,56 +542,28 @@
 
             if (filtered.length === 0) {
                 document.getElementById('news-container').innerHTML = `
-                    <div class="empty-state">
-                        <p>No articles in this category yet.</p>
-                    </div>
+                    <div class="empty-state"><p>No articles in this category yet.</p></div>
                 `;
                 return;
             }
 
             const grouped = groupArticlesByDate(filtered);
-            const today = new Date().toLocaleDateString('en-US', { 
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            const html = Object.entries(grouped).map(([dateStr, articles], index) => {
-                const isToday = dateStr === today;
-                const dateId = `date-${dateStr.replace(/\s+/g, '-')}`;
-                
+            const todayIso = new Date().toISOString().split('T')[0];
+
+            const html = Object.entries(grouped).map(([isoDate, { displayDate, articles }]) => {
+                const isToday = isoDate === todayIso;
+                const dateId = `date-${isoDate}`;
+                const summary = summaries[isoDate] || null;
+
                 return `
                     <div class="date-section">
                         <div class="date-header ${!isToday ? 'collapsed' : ''}" onclick="toggleDate('${dateId}')">
                             <div class="date-toggle">▼</div>
-                            <div class="date-label">${dateStr}</div>
+                            <div class="date-label">${displayDate}</div>
                             <div class="date-count">${articles.length}</div>
                         </div>
-                        <div class="articles-container ${!isToday ? 'hidden' : ''}" id="${dateId}">
-                            ${articles.map(article => {
-                                const time = new Date(article.fetchedAt);
-                                const timeAgo = getTimeAgo(time);
-                                const priorityClass = article.priority ? article.priority.toLowerCase() : '';
-                                
-                                return `
-                                    <a href="${article.url}" target="_blank" rel="noopener noreferrer">
-                                        <div class="article-card">
-                                            <div style="display: flex; gap: 0.75rem;">
-                                                <span class="article-badge ${priorityClass}">
-                                                    ${article.category || 'News'}
-                                                </span>
-                                                ${article.priority === 'critical' ? '<span class="article-badge critical">CRITICAL</span>' : ''}
-                                            </div>
-                                            <div class="article-title">${escapeHtml(article.title)}</div>
-                                            <div class="article-meta">
-                                                <span class="article-source">${article.source}</span>
-                                                <span class="article-time">${timeAgo}</span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                `;
-                            }).join('')}
+                        <div class="date-content ${!isToday ? 'hidden' : ''}" id="${dateId}">
+                            ${summary ? renderSummaryView(summary, articles) : renderCardView(articles)}
                         </div>
                     </div>
                 `;
@@ -514,10 +572,59 @@
             document.getElementById('news-container').innerHTML = html;
         }
 
+        function renderSummaryView(summary, articles) {
+            const refs = articles.map(a => {
+                const priorityClass = a.priority ? a.priority.toLowerCase() : '';
+                return `
+                    <a href="${a.url}" target="_blank" rel="noopener noreferrer" class="reference-item">
+                        <span class="ref-badge ${priorityClass}">${escapeHtml(a.category || 'News')}</span>
+                        <span class="ref-title">${escapeHtml(a.title)}</span>
+                        <span class="ref-source">${escapeHtml(a.source)}</span>
+                    </a>
+                `;
+            }).join('');
+
+            return `
+                <div class="summary-block">
+                    <div class="summary-label">Summary</div>
+                    <div class="summary-text">${escapeHtml(summary)}</div>
+                </div>
+                <div class="references-section">
+                    <div class="references-label">References</div>
+                    ${refs}
+                </div>
+            `;
+        }
+
+        function renderCardView(articles) {
+            return `
+                <div class="articles-container">
+                    ${articles.map(article => {
+                        const timeAgo = getTimeAgo(new Date(article.fetchedAt));
+                        const priorityClass = article.priority ? article.priority.toLowerCase() : '';
+                        return `
+                            <a href="${article.url}" target="_blank" rel="noopener noreferrer">
+                                <div class="article-card">
+                                    <div style="display: flex; gap: 0.75rem;">
+                                        <span class="article-badge ${priorityClass}">${article.category || 'News'}</span>
+                                        ${article.priority === 'critical' ? '<span class="article-badge critical">CRITICAL</span>' : ''}
+                                    </div>
+                                    <div class="article-title">${escapeHtml(article.title)}</div>
+                                    <div class="article-meta">
+                                        <span class="article-source">${article.source}</span>
+                                        <span class="article-time">${timeAgo}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
         function toggleDate(dateId) {
             const container = document.getElementById(dateId);
             const header = container.previousElementSibling;
-            
             container.classList.toggle('hidden');
             header.classList.toggle('collapsed');
         }
