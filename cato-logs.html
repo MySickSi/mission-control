@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cato Monitoring Logs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --accent: #06b6d4;
+            --accent-light: #22d3ee;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --neutral-400: #9ca3af;
+            --neutral-600: #4b5563;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a2a4a 100%);
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .last-updated {
+            font-size: 0.9rem;
+            color: var(--neutral-400);
+        }
+
+        .logs-container {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .log-entry {
+            background: var(--bg-secondary);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .log-entry:hover {
+            border-color: var(--accent);
+            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.15);
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .log-timestamp {
+            font-weight: 600;
+            color: var(--accent-light);
+            font-size: 1rem;
+        }
+
+        .log-time-ago {
+            font-size: 0.85rem;
+            color: var(--neutral-400);
+        }
+
+        .domain-checks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .domain-check {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .domain-name {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .check-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            font-size: 0.9rem;
+        }
+
+        .check-label {
+            color: var(--neutral-400);
+        }
+
+        .check-value {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .check-value.success {
+            color: var(--success);
+        }
+
+        .check-value.warning {
+            color: var(--warning);
+        }
+
+        .check-value.danger {
+            color: var(--danger);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-badge.healthy {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-badge.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--neutral-400);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--accent);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--accent);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .ports-list {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🛡️ Cato Monitoring Logs</h1>
+                <p class="last-updated" style="margin-top: 0.5rem;">Last updated: <span id="last-update">Loading...</span></p>
+            </div>
+            <div class="header-controls">
+                <button onclick="runCatoCheck()">⟳ Run Check Now</button>
+                <button onclick="exportLogs()" style="background:var(--bg-tertiary);color:#e2e8f0;">⬇ Export Logs</button>
+                <button id="toggle-logs-btn" onclick="toggleHistory()" style="background:var(--bg-tertiary);color:var(--accent-light);">Show History</button>
+                <button onclick="loadLogs()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div id="latest-container" class="logs-container"></div>
+        <div id="history-container" class="logs-container" style="display:none;"></div>
+        <div id="logs-container" class="logs-container" style="display:none;">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                Loading monitoring logs...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load logs from API
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/cato/logs');
+                const data = await response.json();
+                
+                if (data.logs && data.logs.length > 0) {
+                    renderLogs(data.logs);
+                    updateLastUpdate(data.logs[0].timestamp);
+                } else {
+                    document.getElementById('logs-container').innerHTML = `
+                        <div class="empty-state">
+                            <p>No monitoring logs yet. Cato will run daily at midnight EST.</p>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Error loading logs:', err);
+                document.getElementById('logs-container').innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: var(--danger);">Failed to load logs</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render logs: latest at top, last 7 days under toggle
+        function renderLogEntry(logEntry) {
+            const timestamp = new Date(logEntry.timestamp);
+            const timeAgo = getTimeAgo(timestamp);
+            const scan = logEntry.scan || [];
+            return `
+                <div class="log-entry">
+                    <div class="log-header">
+                        <div>
+                            <div class="log-timestamp">${timestamp.toLocaleString()}</div>
+                            <div class="log-time-ago">${timeAgo}</div>
+                        </div>
+                    </div>
+                    <div class="domain-checks">
+                        ${scan.map(check => renderDomainCheck(check)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLogs(logs) {
+            const latest = document.getElementById('latest-container');
+            const history = document.getElementById('history-container');
+            const btn = document.getElementById('toggle-logs-btn');
+
+            if (!logs || logs.length === 0) {
+                latest.innerHTML = '<div class="log-entry">No scans yet.</div>';
+                history.innerHTML = '';
+                btn.style.display = 'none';
+                return;
+            }
+
+            const sorted = [...logs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            latest.innerHTML = '<h2 style="font-size:1rem;color:var(--accent-light);margin-bottom:0.75rem;">Most Recent Scan</h2>' + renderLogEntry(sorted[0]);
+
+            const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            const histEntries = sorted.slice(1).filter(l => new Date(l.timestamp).getTime() >= cutoff);
+
+            if (histEntries.length === 0) {
+                history.innerHTML = '<div class="log-entry">No earlier scans in the last 7 days.</div>';
+                btn.textContent = 'Show History (0)';
+            } else {
+                history.innerHTML = '<h2 style="font-size:1rem;color:var(--accent-light);margin:1rem 0 0.75rem;">History — Last 7 Days</h2>' + histEntries.map(renderLogEntry).join('');
+                const isHidden = history.style.display === 'none';
+                btn.textContent = (isHidden ? 'Show' : 'Hide') + ' History (' + histEntries.length + ')';
+            }
+            btn.style.display = '';
+        }
+
+        function toggleHistory() {
+            const history = document.getElementById('history-container');
+            const btn = document.getElementById('toggle-logs-btn');
+            const hidden = history.style.display === 'none';
+            history.style.display = hidden ? '' : 'none';
+            const match = btn.textContent.match(/\((\d+)\)/);
+            const count = match ? match[1] : '0';
+            btn.textContent = (hidden ? 'Hide' : 'Show') + ' History (' + count + ')';
+        }
+
+
+        // Render individual domain check
+        function renderDomainCheck(check) {
+            const statusClass = check.overallStatus === 'healthy' ? 'healthy' : 'warning';
+            const httpStatus = check.checks.http?.status === 'online' ? '✓ Online' : '✗ Offline';
+            const sslStatus = check.checks.ssl?.status;
+            const sslText = sslStatus === 'valid' ? '✓ Valid' : sslStatus === 'expired' ? '✗ Expired' : sslStatus === 'expiring' ? '⚠ Expiring' : '? Unknown';
+            const shodanStatus = check.checks.shodan?.status;
+            const shodanText = shodanStatus === 'found' ? `✓ Found (${check.checks.shodan.ports.length} ports)` : shodanStatus === 'error' ? '✗ Error' : '? Not Found';
+            const wireguardStatus = check.checks.wireguard?.status;
+            const wireguardText = wireguardStatus === 'listening' ? '✓ Listening (13231)' : wireguardStatus === 'not_listening' ? '✗ Not Listening' : wireguardStatus === 'error' ? '✗ Error' : '? Unknown';
+            const wireguardClass = wireguardStatus === 'listening' ? 'success' : wireguardStatus === 'not_listening' ? 'danger' : 'warning';
+
+            return `
+                <div class="domain-check">
+                    <div class="domain-name">
+                        ${check.description}
+                        <span class="status-badge ${statusClass}" style="float: right;">${check.overallStatus === 'healthy' ? 'Healthy' : 'Warning'}</span>
+                    </div>
+                    <div class="check-row">
+                        <span class="check-label">HTTP Status</span>
+                        <span class="check-value ${check.checks.http?.status === 'online' ? 'success' : 'danger'}">${httpStatus}</span>
+                    </div>
+                    <div class="check-row">
+                        <span class="check-label">SSL Certificate</span>
+                        <span class="check-value ${sslStatus === 'valid' ? 'success' : 'warning'}">${sslText}</span>
+                    </div>
+                    ${check.checks.ssl?.daysUntilExpiry !== undefined ? `
+                    <div class="check-row">
+                        <span class="check-label">Expires In</span>
+                        <span class="check-value ${check.checks.ssl.daysUntilExpiry < 30 ? 'warning' : 'success'}">${check.checks.ssl.daysUntilExpiry} days</span>
+                    </div>
+                    ` : ''}
+                    <div class="check-row">
+                        <span class="check-label">Shodan</span>
+                        <span class="check-value ${shodanStatus === 'found' ? 'success' : 'warning'}">${shodanText}</span>
+                    </div>
+                    ${check.checks.shodan?.ports && check.checks.shodan.ports.length > 0 ? `
+                    <div class="ports-list">
+                        Ports: ${check.checks.shodan.ports.join(', ')}
+                    </div>
+                    ` : ''}
+                    ${wireguardStatus ? `
+                    <div class="check-row">
+                        <span class="check-label">WireGuard Port</span>
+                        <span class="check-value ${wireguardClass}">${wireguardText}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Get time ago string
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days}d ago`;
+            if (hours > 0) return `${hours}h ago`;
+            if (minutes > 0) return `${minutes}m ago`;
+            return 'Just now';
+        }
+
+        // Update last update time
+        function updateLastUpdate(timestamp) {
+            document.getElementById('last-update').textContent = getTimeAgo(new Date(timestamp));
+        }
+
+        // Run Cato check manually
+        async function runCatoCheck() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⟳ Running...';
+            
+            try {
+                const response = await fetch('/api/cato/run', { method: 'POST' });
+                if (response.ok) {
+                    await loadLogs();
+                }
+            } catch (err) {
+                console.error('Run failed:', err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⟳ Run Check Now';
+            }
+        }
+
+        // Toggle raw logs
+        function toggleLogs() {
+            const container = document.getElementById('logs-container');
+            const btn = document.getElementById('toggle-logs-btn');
+            const hidden = container.style.display === 'none';
+            container.style.display = hidden ? '' : 'none';
+            btn.textContent = hidden ? 'Hide Logs' : 'Show Logs';
+        }
+
+        // Export monitoring logs as JSON
+        async function exportLogs() {
+            try {
+                const resp = await fetch('/api/cato/logs');
+                const data = await resp.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'cato-monitoring-logs.json';
+                a.click();
+            } catch(e) { alert('Export failed: ' + e.message); }
+        }
+
+                // Load on startup
+        loadLogs();
+
+        // Auto-refresh every 5 minutes
+        setInterval(loadLogs, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

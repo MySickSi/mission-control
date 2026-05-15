@@ -1,0 +1,19 @@
+[Unit]
+Description=Mission Control Dashboard
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/.openclaw/workspace/mission-control
+ExecStart=/usr/bin/node /home/ubuntu/.openclaw/workspace/mission-control/server.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/ubuntu/.openclaw/workspace/mission-control/server.log
+StandardError=append:/home/ubuntu/.openclaw/workspace/mission-control/server.log
+Environment="NODE_ENV=production"
+
+[Install]
+WantedBy=multi-user.target

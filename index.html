@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control - OpenClaw</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --neutral-900: #111827;
+            --neutral-800: #1f2937;
+            --neutral-700: #374151;
+            --neutral-600: #4b5563;
+            --neutral-500: #6b7280;
+            --neutral-400: #9ca3af;
+            --neutral-300: #d1d5db;
+            --neutral-200: #e5e7eb;
+            --neutral-100: #f3f4f6;
+            --accent: #06b6d4;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--neutral-900) 0%, var(--neutral-800) 100%);
+            color: var(--neutral-100);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--neutral-700);
+            padding-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--neutral-400);
+            font-size: 0.95rem;
+        }
+
+        .timestamp {
+            font-size: 0.85rem;
+            color: var(--neutral-500);
+            margin-top: 0.5rem;
+        }
+
+        .hierarchy-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .role-card {
+            background: linear-gradient(135deg, var(--neutral-800) 0%, var(--neutral-700) 100%);
+            border: 1px solid var(--neutral-600);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+        }
+
+        .role-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(6, 182, 212, 0.1);
+        }
+
+        .role-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .role-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .role-info h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .role-title {
+            color: var(--neutral-400);
+            font-size: 0.9rem;
+        }
+
+        .role-details {
+            display: grid;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--neutral-600);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--neutral-400);
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: var(--neutral-100);
+        }
+
+        .agents-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--neutral-800);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--neutral-600);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .agents-table thead {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .agents-table th {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: white;
+        }
+
+        .agents-table tbody tr {
+            border-top: 1px solid var(--neutral-700);
+            transition: background 0.2s ease;
+        }
+
+        .agents-table tbody tr:hover {
+            background: var(--neutral-700);
+        }
+
+        .agents-table td {
+            padding: 1rem 1.5rem;
+            vertical-align: middle;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: var(--neutral-100);
+        }
+
+        .agent-role {
+            color: var(--neutral-400);
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-good {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .status-issue {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.good {
+            background: var(--success);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .status-dot.issue {
+            background: var(--danger);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .last-updated {
+            color: var(--neutral-500);
+            font-size: 0.85rem;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--neutral-700);
+            text-align: center;
+            color: var(--neutral-500);
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-indicator.good {
+            background: var(--success);
+        }
+
+        .status-indicator.issue {
+            background: var(--danger);
+        }
+
+        .domain-card {
+            background: linear-gradient(135deg, var(--neutral-800) 0%, var(--neutral-700) 100%);
+            border: 1px solid var(--neutral-600);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .domain-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(6, 182, 212, 0.1);
+        }
+
+        .domain-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .domain-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .domain-icon {
+            font-size: 2rem;
+        }
+
+        .domain-title {
+            flex: 1;
+        }
+
+        .domain-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .domain-type {
+            font-size: 0.85rem;
+            color: var(--neutral-400);
+            margin-top: 0.25rem;
+        }
+
+        .domain-status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .domain-status-badge.healthy {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .domain-status-badge.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .domain-status-badge.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .domain-details {
+            display: grid;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .domain-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--neutral-600);
+        }
+
+        .domain-detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .domain-detail-label {
+            color: var(--neutral-400);
+        }
+
+        .domain-detail-value {
+            color: var(--neutral-100);
+            font-weight: 500;
+        }
+
+        .domain-detail-value.warning {
+            color: var(--warning);
+        }
+
+        .domain-detail-value.success {
+            color: var(--success);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .agents-table {
+                font-size: 0.85rem;
+            }
+
+            .agents-table th,
+            .agents-table td {
+                padding: 0.75rem;
+            }
+        }
+
+        /* Tree Hierarchy */
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 1rem;
+        }
+
+        .tree-tier-1,
+        .tree-tier-2 {
+            width: 380px;
+            max-width: 100%;
+        }
+
+        .tree-tier-1 .role-card::before {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .tree-tier-2 .role-card::before {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+        }
+
+        .tree-tier-3 {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+        }
+
+        .tree-tier-3 .role-card {
+            width: 280px;
+        }
+
+        .tree-tier-3 .role-card::before {
+            background: linear-gradient(90deg, var(--success) 0%, #059669 100%);
+        }
+
+        .tier-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .tier-1-badge { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .tier-2-badge { background: rgba(6,182,212,0.2);  color: var(--accent); }
+        .tier-3-badge { background: rgba(16,185,129,0.2); color: var(--success); }
+
+        .v-connector {
+            width: 2px;
+            height: 48px;
+            background: linear-gradient(to bottom, var(--accent), var(--primary));
+        }
+
+        .branch-connector {
+            position: relative;
+            width: 624px;
+            height: 48px;
+        }
+
+        .branch-connector::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 24px;
+            background: var(--accent);
+        }
+
+        .branch-connector::after {
+            content: "";
+            position: absolute;
+            top: 24px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+        }
+
+        .branch-drop {
+            position: absolute;
+            top: 26px;
+            width: 2px;
+            height: 22px;
+            background: var(--accent);
+        }
+        .branch-drop.left  { left:  0; }
+        .branch-drop.mid   { left: 50%; transform: translateX(-50%); }
+        .branch-drop.right { right: 0; }
+
+        @media (max-width: 680px) {
+            .tree-tier-3 { flex-direction: column; align-items: center; }
+            .tree-tier-3 .role-card { width: 100%; max-width: 360px; }
+            .branch-connector { width: 2px; height: 24px; background: var(--accent); }
+            .branch-connector::before, .branch-connector::after, .branch-drop { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚖️ Mission Control</h1>
+            <p class="subtitle">OpenClaw Agent Command Center</p>
+            <div class="timestamp" id="current-time"></div>
+        </header>
+
+        <!-- Role Hierarchy Section -->
+        <section class="hierarchy-section">
+            <h2 class="section-title">Command Hierarchy</h2>
+
+            <div class="tree-container">
+
+                <!-- Tier 1: Keith -->
+                <div class="tree-tier-1">
+                    <div class="role-card">
+                        <div class="role-header">
+                            <div class="role-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">&#x1F451;</div>
+                            <div class="role-info">
+                                <h3>Keith</h3>
+                                <p class="role-title">Human Operator</p>
+                            </div>
+                            <span class="tier-badge tier-1-badge">Tier 1</span>
+                        </div>
+                        <div class="role-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Authority</span>
+                                <span class="detail-value">Supreme</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value" style="color:var(--success);">
+                                    <span class="status-indicator good"></span>Active
+                                </span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Role</span>
+                                <span class="detail-value">Commander</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v-connector"></div>
+
+                <!-- Tier 2: Justinian -->
+                <div class="tree-tier-2">
+                    <div class="role-card">
+                        <div class="role-header">
+                            <div class="role-icon">&#x2699;&#xFE0F;</div>
+                            <div class="role-info">
+                                <h3>Justinian</h3>
+                                <p class="role-title">AI Assistant</p>
+                            </div>
+                            <span class="tier-badge tier-2-badge">Tier 2</span>
+                        </div>
+                        <div class="role-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Reports To</span>
+                                <span class="detail-value">Keith</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value" style="color:var(--success);">
+                                    <span class="status-indicator good"></span>Online
+                                </span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Model</span>
+                                <span class="detail-value">Haiku-4.5</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Branch connector -->
+                <div class="branch-connector">
+                    <div class="branch-drop left"></div>
+                    <div class="branch-drop mid"></div>
+                    <div class="branch-drop right"></div>
+                </div>
+
+                <!-- Tier 3: Livy + Cato -->
+                <div class="tree-tier-3">
+
+                    <div class="role-card">
+                        <div class="role-header">
+                            <div class="role-icon" style="background:linear-gradient(135deg,#10b981,#059669);">&#x1F510;</div>
+                            <div class="role-info">
+                                <h3>Livy</h3>
+                                <p class="role-title">News Aggregator</p>
+                            </div>
+                            <span class="tier-badge tier-3-badge">Tier 3</span>
+                        </div>
+                        <div class="role-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Reports To</span>
+                                <span class="detail-value">Justinian</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value" style="color:var(--success);">
+                                    <span class="status-indicator good"></span>Operational
+                                </span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Model</span>
+                                <span class="detail-value">Llama 3.1 8B</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Focus</span>
+                                <span class="detail-value">Security &amp; AI News</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-header">
+                            <div class="role-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);">&#x1F6E1;&#xFE0F;</div>
+                            <div class="role-info">
+                                <h3>Cato</h3>
+                                <p class="role-title">Security Monitor</p>
+                            </div>
+                            <span class="tier-badge tier-3-badge">Tier 3</span>
+                        </div>
+                        <div class="role-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Reports To</span>
+                                <span class="detail-value">Justinian</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value" style="color:var(--success);">
+                                    <span class="status-indicator good"></span>Monitoring
+                                </span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Model</span>
+                                <span class="detail-value">Llama 3.2 3B</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Focus</span>
+                                <span class="detail-value">Shodan, SSL, HTTP, Ports</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-header">
+                            <div class="role-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">&#x2694;&#xFE0F;</div>
+                            <div class="role-info">
+                                <h3>Belisarius</h3>
+                                <p class="role-title">Scan Orchestrator</p>
+                            </div>
+                            <span class="tier-badge tier-3-badge">Tier 3</span>
+                        </div>
+                        <div class="role-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Reports To</span>
+                                <span class="detail-value">Justinian</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value" style="color:var(--success);">
+                                    <span class="status-indicator good"></span>Standby
+                                </span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Model</span>
+                                <span class="detail-value">Llama 3.1 8B</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Focus</span>
+                                <span class="detail-value">ZAP, Nikto, Nmap</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Command Hierarchy Info -->
+        <section class="hierarchy-section" style="background: rgba(6, 182, 212, 0.05); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent);">
+            <p style="color: var(--neutral-300); font-size: 0.95rem; line-height: 1.6;">
+                <strong>Command Hierarchy:</strong> Keith (Human) holds supreme authority. Justinian (AI Assistant) executes delegated tasks with full capabilities. Livy (News Agent) aggregates security and AI news daily. Cato (Security Monitor) performs health checks and vulnerability scans using Shodan, SSL validation, HTTP monitoring, and port scanning.
+            </p>
+        </section>
+
+        <!-- System Heartbeat Section -->
+        <section class="hierarchy-section">
+            <h2 class="section-title">System Heartbeat</h2>
+            <table class="agents-table">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Model / Type</th>
+                        <th>Last Heartbeat</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="heartbeat-tbody">
+                    <!-- Dynamically populated -->
+                </tbody>
+            </table>
+            <div class="last-updated" style="margin-top: 1rem; text-align: right;">
+                Heartbeat checked: <span id="heartbeat-time">Just now</span>
+            </div>
+        </section>
+
+        <!-- Agent Status Section -->
+        <section class="hierarchy-section">
+            <h2 class="section-title">Agent Status</h2>
+            <div style="background: rgba(6, 182, 212, 0.05); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent); color: var(--neutral-300); font-size: 0.95rem;">
+                <p>Agent status is live from cron metadata. <a href="/news" style="color: var(--accent); text-decoration: underline;">→ View live news dashboard</a> for Livy output. | <a href="/vuln-scan.html" style="color: var(--accent); text-decoration: underline;">→ View Vulnerability Scan Report</a></p>
+            </div>
+        </section>
+
+
+        <footer class="footer">
+            <p>Mission Control v1.0 — Local Agent Command Dashboard</p>
+        </footer>
+    </div>
+
+    <script>
+        // Heartbeat data
+        let heartbeatData = [];
+        let heartbeatConfig = {
+            frequency: '1h',
+            model: 'ollama/llama3.2:3b',
+            lastRun: new Date().toISOString(),
+            nextRun: new Date().toISOString(),
+            status: 'loading'
+        };
+
+        // Format relative time
+        function formatRelativeTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+
+            if (diffSecs < 60) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Fetch domain status from API
+        async function fetchDomainStatus() {
+            try {
+                const response = await fetch('/api/domains');
+                const data = await response.json();
+                if (data.success && data.domains) {
+                    populateDomains(data.domains);
+                    document.getElementById('domains-last-check').textContent = getTimeAgo(data.timestamp);
+                }
+            } catch (error) {
+                console.error('Domain fetch error:', error);
+                document.getElementById('domains-container').innerHTML = '<p style="color: var(--danger);">Failed to load domain status</p>';
+            }
+        }
+
+        // Render domain cards
+        function populateDomains(domains) {
+            const container = document.getElementById('domains-container');
+            container.innerHTML = domains.map(domain => {
+                const statusClass = domain.overallStatus === 'healthy' ? 'healthy' : 'warning';
+                const httpStatus = domain.http?.status === 'online' ? '✓ Online' : '✗ Offline';
+                const sslStatus = domain.ssl?.status || 'unknown';
+                const sslStatusText = sslStatus === 'valid' ? `✓ Valid` : sslStatus === 'expired' ? '✗ Expired' : sslStatus === 'expiring-soon' ? '⚠ Expiring Soon' : '? Unknown';
+                const daysLeft = domain.ssl?.daysUntilExpiry;
+                
+                return `
+                    <div class="domain-card" style="position: relative;">
+                        <div class="domain-header">
+                            <div class="domain-icon">${domain.icon}</div>
+                            <div class="domain-title">
+                                <div class="domain-name">${domain.name}</div>
+                                <div class="domain-type">${domain.description}</div>
+                            </div>
+                            <div class="domain-status-badge ${statusClass}">
+                                <span class="status-dot ${statusClass === 'healthy' ? 'good' : 'issue'}"></span>
+                                ${statusClass === 'healthy' ? 'Healthy' : 'Warning'}
+                            </div>
+                        </div>
+                        <div class="domain-details">
+                            <div class="domain-detail-row">
+                                <span class="domain-detail-label">HTTP Status</span>
+                                <span class="domain-detail-value ${domain.http?.status === 'online' ? 'success' : 'warning'}">${httpStatus}</span>
+                            </div>
+                            <div class="domain-detail-row">
+                                <span class="domain-detail-label">SSL Certificate</span>
+                                <span class="domain-detail-value ${sslStatus === 'valid' ? 'success' : 'warning'}">${sslStatusText}</span>
+                            </div>
+                            ${daysLeft !== undefined ? `
+                            <div class="domain-detail-row">
+                                <span class="domain-detail-label">Expires In</span>
+                                <span class="domain-detail-value ${daysLeft < 30 ? 'warning' : 'success'}">${daysLeft} days</span>
+                            </div>
+                            ` : ''}
+                            <div class="domain-detail-row">
+                                <span class="domain-detail-label">DNS</span>
+                                <span class="domain-detail-value ${domain.dns?.status === 'resolved' ? 'success' : 'warning'}">${domain.dns?.status === 'resolved' ? '✓ Resolved' : '✗ Error'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Fetch heartbeat data from API
+        async function fetchHeartbeatData() {
+            try {
+                const response = await fetch('/api/heartbeat');
+                if (!response.ok) throw new Error('Failed to fetch heartbeat data');
+                const data = await response.json();
+                heartbeatConfig = data;
+                heartbeatData = data.components || [];
+                populateHeartbeat();
+                updateHeartbeatTime();
+            } catch (error) {
+                console.error('Heartbeat fetch error:', error);
+                // Fall back to defaults if API fails
+                populateHeartbeat();
+            }
+        }
+
+        // Sample agent data
+        const agents = [
+            {
+                name: 'Justinian (Main)',
+                role: 'Primary Assistant',
+                status: 'good',
+                lastHeartbeat: 'Just now',
+                tasks: 3
+            },
+            {
+                name: 'Skill Engine',
+                role: 'Skill Execution',
+                status: 'good',
+                lastHeartbeat: '2 min ago',
+                tasks: 0
+            },
+            {
+                name: 'Weather Service',
+                role: 'Data Fetching',
+                status: 'good',
+                lastHeartbeat: '5 min ago',
+                tasks: 1
+            },
+            {
+                name: 'Memory System',
+                role: 'Context Storage',
+                status: 'good',
+                lastHeartbeat: 'Just now',
+                tasks: 0
+            }
+        ];
+
+        // Populate heartbeat table
+        function populateHeartbeat() {
+            const tbody = document.getElementById('heartbeat-tbody');
+            if (heartbeatData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--neutral-500);">Loading heartbeat data...</td></tr>';
+                return;
+            }
+            tbody.innerHTML = heartbeatData.map(item => `
+                <tr>
+                    <td><span class="agent-name">${item.component}</span></td>
+                    <td><span class="agent-role">${item.model}</span></td>
+                    <td class="last-updated">${formatRelativeTime(item.lastHeartbeat)}</td>
+                    <td>
+                        <span class="status-badge ${item.status === 'good' ? 'status-good' : 'status-issue'}">
+                            <span class="status-dot ${item.status}"></span>
+                            ${item.status === 'good' ? 'Healthy' : 'Issue'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update heartbeat time info
+        function updateHeartbeatTime() {
+            const lastRun = formatRelativeTime(heartbeatConfig.lastRun);
+            const nextRun = new Date(heartbeatConfig.nextRun);
+            const diffMs = nextRun - new Date();
+            const diffMins = Math.ceil(diffMs / 60000);
+            const inText = diffMins > 0 ? `in ${diffMins}m` : 'soon';
+            document.getElementById('heartbeat-time').textContent = `${lastRun} | Next run: ${inText}`;
+        }
+
+        // Fetch agent status from API (live feed)
+        async function fetchAgentStatus() {
+            try {
+                const response = await fetch('/api/agents');
+                const data = await response.json();
+                populateAgents(data);
+                document.getElementById('last-update').textContent = 'Just now';
+            } catch (error) {
+                console.error('Agent fetch error:', error);
+            }
+        }
+
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'UTC'
+            });
+            document.getElementById('current-time').textContent = 'Current Time: ' + formatter.format(now) + ' UTC';
+        }
+
+        // Initialize
+        updateTime();
+        fetchHeartbeatData(); // Fetch real heartbeat data on load
+        fetchDomainStatus(); // Fetch domain status on load
+
+        // Update time every second
+        setInterval(updateTime, 1000);
+
+        // Refresh heartbeat data every 30 seconds
+        setInterval(() => {
+            fetchHeartbeatData();
+        }, 30000);
+
+        // Refresh domain status every 2 minutes
+        setInterval(() => {
+            fetchDomainStatus();
+        }, 120000);
+
+        // Manual domain check on demand
+        window.refreshDomains = function() {
+            console.log('Refreshing domain status...');
+            fetchDomainStatus();
+        };
+    </script>
+</body>
+</html>

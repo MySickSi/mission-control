@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerability Scan – ZAP Report</title>
+    <style>
+        :root {
+            --bg:      #0f172a;
+            --bg2:     #1e293b;
+            --bg3:     #334155;
+            --accent:  #06b6d4;
+            --accentl: #22d3ee;
+            --success: #10b981;
+            --warn:    #f59e0b;
+            --danger:  #ef4444;
+            --blue:    #60a5fa;
+            --muted:   #94a3b8;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+               background:var(--bg); color:#e2e8f0; padding:2rem; min-height:100vh; }
+        .header { display:flex; align-items:flex-start; justify-content:space-between;
+                  flex-wrap:wrap; gap:1rem; margin-bottom:2rem;
+                  padding-bottom:1.5rem; border-bottom:2px solid var(--accent); }
+        .header-left h1 { font-size:1.8rem; color:var(--accentl); margin-bottom:0.3rem; }
+        .header-left p  { color:var(--muted); font-size:0.9rem; }
+        .header-right   { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; }
+        .risk-score { font-size:1.1rem; font-weight:700; padding:0.5rem 1.2rem;
+                      border-radius:24px; background:rgba(245,158,11,0.18); color:var(--warn); }
+        .btn { padding:0.55rem 1.1rem; border:none; border-radius:8px; font-weight:600;
+               cursor:pointer; font-size:0.88rem; transition:all .2s; }
+        .btn-export { background:var(--bg3); color:#e2e8f0; }
+        .btn-export:hover { background:var(--accent); color:var(--bg); }
+
+        /* Summary pills */
+        .summary { display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .pill { padding:0.3rem 0.85rem; border-radius:20px; font-size:0.8rem; font-weight:700; }
+        .pill-high   { background:rgba(239,68,68,.2);   color:var(--danger); }
+        .pill-medium { background:rgba(245,158,11,.2);  color:var(--warn);   }
+        .pill-low    { background:rgba(96,165,250,.2);  color:var(--blue);   }
+        .pill-info   { background:rgba(148,163,184,.15);color:var(--muted);  }
+
+        /* Section headings */
+        .section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase;
+                         letter-spacing:.08em; color:var(--accent); margin-bottom:0.75rem; }
+
+        /* Tables */
+        .tbl-wrap { background:var(--bg2); border:1px solid var(--bg3); border-radius:12px;
+                    overflow:hidden; margin-bottom:2rem; }
+        table { width:100%; border-collapse:collapse; font-size:0.875rem; }
+        thead th { background:var(--bg3); padding:.65rem 1rem; text-align:left;
+                   color:var(--accent); font-size:.75rem; text-transform:uppercase;
+                   letter-spacing:.06em; white-space:nowrap; }
+        tbody td { padding:.6rem 1rem; border-bottom:1px solid var(--bg3); vertical-align:middle; }
+        tbody tr:last-child td { border-bottom:none; }
+        tbody tr:hover td { background:rgba(6,182,212,.04); }
+
+        /* Risk badges */
+        .badge { display:inline-flex; align-items:center; padding:.25rem .7rem;
+                 border-radius:12px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+        .badge-high   { background:rgba(239,68,68,.2);   color:var(--danger); }
+        .badge-medium { background:rgba(245,158,11,.2);  color:var(--warn);   }
+        .badge-low    { background:rgba(96,165,250,.2);  color:var(--blue);   }
+        .badge-info   { background:rgba(148,163,184,.15);color:var(--muted);  }
+
+        .num { color:var(--muted); }
+        .mono { font-family:monospace; font-size:.8rem; color:var(--muted); }
+
+        /* Divider between sections */
+        .divider { height:1px; background:var(--bg3); margin:1.5rem 0; }
+
+        /* Full table toggle */
+        .toggle-row { display:flex; align-items:center; justify-content:space-between;
+                      margin-bottom:0.75rem; }
+        .btn-toggle { background:var(--bg3); color:var(--accentl); }
+        .btn-toggle:hover { background:var(--accent); color:var(--bg); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <h1>🔍 Vulnerability Scan</h1>
+        <p>ZAP active scan of <strong>alienlabs.win</strong></p>
+    </div>
+    <div class="header-right">
+        <span class="risk-score" id="risk-score">⚠ Loading…</span>
+        <button class="btn btn-export" onclick="exportJSON()">⬇ Export JSON</button>
+    </div>
+</div>
+
+<!-- Summary pills -->
+<div class="summary" id="summary"></div>
+
+<!-- ── Top 10 Findings ─────────────────────────────────────────── -->
+<div class="section-title">Top 10 Findings</div>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr><th>#</th><th>Alert</th><th>Risk</th><th>Confidence</th><th>URL</th></tr>
+        </thead>
+        <tbody id="top10-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── All Findings ────────────────────────────────────────────── -->
+<div class="toggle-row">
+    <div class="section-title" style="margin:0;">All Findings (<span id="total-count">—</span>)</div>
+    <button class="btn btn-toggle" onclick="toggleAll(this)">Show All</button>
+</div>
+<div id="all-wrap" style="display:none;">
+    <div class="tbl-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Alert</th><th>Risk</th><th>Confidence</th><th>URL</th></tr>
+            </thead>
+            <tbody id="all-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const RISK_ORDER = {High:4, Medium:3, Low:2, Informational:1};
+    const RISK_SCORE = {High:8, Medium:5, Low:2, Informational:0};
+
+    function badgeClass(risk) {
+        return {High:'badge-high', Medium:'badge-medium', Low:'badge-low', Informational:'badge-info'}[risk] || 'badge-info';
+    }
+    function pillClass(risk) {
+        return {High:'pill-high', Medium:'pill-medium', Low:'pill-low', Informational:'pill-info'}[risk] || 'pill-info';
+    }
+    function shortUrl(u) {
+        const p = (u||'').replace(/https?:\/\/[^/]+/, '');
+        return p.length > 55 ? p.slice(0,55)+'…' : p || '—';
+    }
+
+    function makeRow(a, i) {
+        return `<tr>
+            <td class="num">${i+1}</td>
+            <td style="font-weight:500">${a.alert||a.name}</td>
+            <td><span class="badge ${badgeClass(a.risk)}">${a.risk}</span></td>
+            <td class="num">${a.confidence}</td>
+            <td class="mono" title="${a.url||''}">${shortUrl(a.url||a.nodeName)}</td>
+        </tr>`;
+    }
+
+    let rawData = null;
+
+    async function loadReport() {
+        const resp = await fetch('/api/cato/report');
+        const data = await resp.json();
+        rawData = data;
+        const alerts = data.alerts || [];
+
+        // Risk score
+        const maxRisk = alerts.reduce((best, a) =>
+            (RISK_ORDER[a.risk]||0) > (RISK_ORDER[best]||0) ? a.risk : best, 'Informational');
+        const score = RISK_SCORE[maxRisk] || 0;
+        document.getElementById('risk-score').textContent = `⚠ Risk Score ${score}/10`;
+
+        // Summary pills
+        const counts = {};
+        alerts.forEach(a => { counts[a.risk] = (counts[a.risk]||0)+1; });
+        document.getElementById('summary').innerHTML =
+            Object.entries(counts)
+                .sort((a,b)=>(RISK_ORDER[b[0]]||0)-(RISK_ORDER[a[0]]||0))
+                .map(([r,c])=>`<span class="pill ${pillClass(r)}">${r}: ${c}</span>`)
+                .join('');
+
+        // Deduplicated top-10 (highest risk per unique alert name)
+        const seen = {};
+        alerts.forEach(a => {
+            const k = a.alert||a.name;
+            if (!seen[k] || (RISK_ORDER[a.risk]||0) > (RISK_ORDER[seen[k].risk]||0)) seen[k] = a;
+        });
+        const top10 = Object.values(seen)
+            .sort((a,b)=>(RISK_ORDER[b.risk]||0)-(RISK_ORDER[a.risk]||0))
+            .slice(0, 10);
+
+        document.getElementById('top10-tbody').innerHTML = top10.map((a,i) => makeRow(a,i)).join('');
+
+        // All findings
+        document.getElementById('total-count').textContent = alerts.length;
+        document.getElementById('all-tbody').innerHTML =
+            alerts.map((a,i) => makeRow(a,i)).join('');
+    }
+
+    function toggleAll(btn) {
+        const wrap = document.getElementById('all-wrap');
+        const hidden = wrap.style.display === 'none';
+        wrap.style.display = hidden ? 'block' : 'none';
+        btn.textContent = hidden ? 'Hide All' : 'Show All';
+    }
+
+    function exportJSON() {
+        if (!rawData) return;
+        const blob = new Blob([JSON.stringify(rawData, null, 2)], {type:'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'zap-report-alienlabs.win.json';
+        a.click();
+    }
+
+    loadReport();
+</script>
+</body>
+</html>
